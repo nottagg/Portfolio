@@ -4,17 +4,15 @@ import (
 	"net/http"
 )
 
-func handleAll(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		//TODO: Return all todo list items
-	case http.MethodDelete:
-		//TODO: Delete all todo list items
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+func (s *ServerInfo) handleEmpty(w http.ResponseWriter, r *http.Request) {
+	// Handle empty request
+	s.logger.Info("Received an empty request")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hello World"))
+	s.logger.Info("Handled empty request")
 }
-
-func handleGet(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, World!"))
+func handleGetTask(s ServerInfo, w http.ResponseWriter, r *http.Request) {
+	// Handle GET task request
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("GET task"))
 }

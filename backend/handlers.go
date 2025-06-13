@@ -26,10 +26,37 @@ func (h *Handler) handleEmpty(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request) {
+	// Extract username from JWT claims
+	authHeader := r.Header.Get("Authorization")
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	token, _ := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	username, ok := claims["username"].(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user_id from username
+	var userID int
+	err := h.db.QueryRow(context.Background(), "SELECT id FROM users WHERE username=$1", username).Scan(&userID)
+	if err != nil {
+		h.logger.Error("Failed to get user ID", "error", err)
+		http.Error(w, "User not found", http.StatusUnauthorized)
+		return
+	}
+
 	rows, err := h.db.Query(context.Background(), `
-		SELECT name, description, due_date, status
+		SELECT id, name, description, due_date, status
 		FROM tasks
-	`)
+		WHERE user_id=$1
+	`, userID)
 	if err != nil {
 		h.logger.Error("Failed to query tasks", "error", err)
 		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
@@ -42,10 +69,11 @@ func (h *Handler) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		var item ToDoItem
 		var dueDate time.Time
 		var status string
-		if err := rows.Scan(&item.Name, &item.Description, &dueDate, &status); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.Description, &dueDate, &status); err != nil {
 			h.logger.Error("Failed to scan task row", "error", err)
 			continue
 		}
+		item.UserID = userID
 		item.DueDate = dueDate
 		item.Status = ItemStatus(status)
 		tasks = append(tasks, item)

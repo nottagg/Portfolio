@@ -21,7 +21,8 @@ func (s *ServerInfo) RunServer() error {
 	}
 
 	router.HandleFunc("GET /", handler.handleEmpty)
-	router.HandleFunc("GET /task", handler.handleGetTask)
+	router.HandleFunc("POST /login", handler.handleLogin)
+	router.HandleFunc("GET /task", jwtAuthMiddleware(handler.handleGetTask))
 	server := http.Server{
 		Addr:    ":" + s.Port,
 		Handler: router,

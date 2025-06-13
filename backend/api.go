@@ -15,8 +15,13 @@ type ServerInfo struct {
 
 func (s *ServerInfo) RunServer() error {
 	router := http.NewServeMux()
+	handler := &Handler{
+		db:     s.Db,
+		logger: s.logger,
+	}
 
-	router.HandleFunc("GET /", s.handleEmpty)
+	router.HandleFunc("GET /", handler.handleEmpty)
+	router.HandleFunc("GET /task", handler.handleGetTask)
 	server := http.Server{
 		Addr:    ":" + s.Port,
 		Handler: router,
